@@ -1,0 +1,12 @@
+*.exe
+*.ilk
+*.pdb
+*.obj
+*.log
+*.tlog
+*.idb
+*.filters
+*.sdf
+*.suo
+*.lib
+*.opensdf
