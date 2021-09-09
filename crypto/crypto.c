@@ -79,6 +79,12 @@ _exit:
 	return false;
 }
 
+bool rsa2048_make_pubkey(uint32_t exponent, uint8_t* modulus, uint32_t modulus_len, RSA2048_KEY_BLOB* pubkey)
+{
+	//if pubkey
+	return true;
+}
+
 int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, void** outbuf)
 {
 	HCRYPTPROV prov = 0;
