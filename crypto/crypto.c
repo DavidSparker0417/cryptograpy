@@ -14,7 +14,6 @@
 /************************************************************************/
 
 #define RSA2048BIT_KEY 0x8000000
-#define SAFE_FREE(x) if(x) { free(x); x=NULL; }
 
 static HCRYPTPROV rsa2048_init_context()
 {
@@ -204,4 +203,25 @@ int bf_decode(void* in, int in_len, void* key, int keylen, void** out)
 		blowfish_decryptblock(&ctx, &p_out[0], &p_out[1]);
 
 	return in_len;
+}
+
+/************************************************************************/
+/*----------------------------- CRC16 ----------------------------------*/
+/************************************************************************/
+uint16_t CRC16(void *input_str, int num_bytes)
+{
+	return crc_16((uint8_t*)input_str, num_bytes);
+}
+
+/************************************************************************/
+/*---------------------------- SHA256 ----------------------------------*/
+/************************************************************************/
+#include "sha256.h"
+bool SHA256_hash(void* buf, int len, void* hash)
+{
+	SHA256_CTX ctx;
+	sha256_init(&ctx);
+	sha256_update(&ctx, (uint8_t*)buf, len);
+	sha256_final(&ctx, hash);
+	return true;
 }

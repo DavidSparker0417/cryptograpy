@@ -131,15 +131,48 @@ void test_crc16()
 	uint16_t crc;
 	printf("++++++++++++++ CRC16 +++++++++++++++\n");
 	printf("[CRC16] plain buffer.\n\t%s\n", test_buf);
-	crc = crc_16((uint8_t*)test_buf, strlen(test_buf));
+	crc = CRC16((uint8_t*)test_buf, strlen(test_buf));
 	printf("[CRC16] crc = .\n\t0x%04X\n", crc);
 }
+
+void test_keygen()
+{
+	char *test_buf = "12345678";
+	char *activation_code = NULL;
+	RSA2048_KEY_BLOB priv_key = { 0 };
+	RSA2048_KEY_BLOB pub_key = { 0 };
+	
+	printf("++++++++++++++ KEYGEN +++++++++++++++\n");
+	printf("[KEYGEN] device id = %s\n", test_buf);
+
+	if (!rsa2048_key_generate(&pub_key, &priv_key))
+		goto _exit;
+
+	activation_code = crypto_keygen(test_buf, strlen(test_buf), &priv_key);
+	if (activation_code)
+		printf("[KEYGEN] activation code = %s\n", activation_code);
+	
+
+	if (activation_checkout(activation_code, test_buf, strlen(test_buf), &pub_key))
+		printf("[KEYGEN] check ok!\n");
+	else
+		printf("[KEYGEN] check failed!\n");
+
+	SAFE_FREE(activation_code);
+
+_exit:
+	SAFE_FREE(pub_key.blob);
+	SAFE_FREE(priv_key.blob);
+	SAFE_FREE(activation_code);
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-	test_rsa2048();
+	/*test_rsa2048();
 	test_base64();
 	test_blowfish();
-	test_crc16();
+	test_crc16();*/
+	test_keygen();
 	return 0;
 }
 

@@ -5,6 +5,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+	#define SAFE_FREE(x) if(x) { free(x); x=NULL; }
+
 	/* RSA2048 */
 	typedef struct _RSA2048_KEY_BLOB_
 	{
@@ -26,7 +28,15 @@ extern "C" {
 	int bf_decode(void* in, int in_len, void* key, int keylen, void** out);
 
 	/* crc16 */
-	uint16_t crc_16(const unsigned char *input_str, size_t num_bytes);
+	uint16_t CRC16(void *input_str, int num_bytes);
+
+	/* SHA256 */
+	bool SHA256_hash(void* buf, int len, void* hash);
+
+	/* keygen */
+	char* crypto_keygen(void* dev_info, int len, RSA2048_KEY_BLOB* sigkey);
+	bool activation_checkout(void* activate_code, void* devinfo, int devinfo_len, RSA2048_KEY_BLOB* rsa_key);
+
 #ifdef __cplusplus
 }
 #endif
