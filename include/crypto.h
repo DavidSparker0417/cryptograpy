@@ -6,10 +6,16 @@
 extern "C" {
 #endif
 	/* RSA2048 */
+	typedef struct _RSA2048_KEY_BLOB_
+	{
+		void*		blob;
+		uint32_t	blob_len;
+	} RSA2048_KEY_BLOB;
+
 	bool rsa2048_init();
-	void rsa2048_get_key(void* pubkey);
-	int rsa2048_encrypt(void* inbuf, uint32_t buflen, void** outbuf);
-	int rsa2048_decrypt(void* inbuf, int in_len, void** outbuf, void* deckey);
+	bool rsa2048_key_generate(RSA2048_KEY_BLOB* pub_key, RSA2048_KEY_BLOB* priv_key);
+	int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, void** outbuf);
+	int rsa2048_decrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* pub_key, void** outbuf);
 
 	/* base64 */
 	int base64_encode(void* in, int in_len, void** out);

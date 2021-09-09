@@ -87,14 +87,11 @@
     <ClCompile Include="blowfish_dat.c" />
     <ClCompile Include="crc16.c" />
     <ClCompile Include="crypto.c" />
-    <ClCompile Include="rsa.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\crypto.h" />
     <ClInclude Include="bignum.h" />
     <ClInclude Include="blowfish.h" />
-    <ClInclude Include="keys.h" />
-    <ClInclude Include="rsa.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

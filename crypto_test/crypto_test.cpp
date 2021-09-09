@@ -63,20 +63,15 @@ void test_rsa2048()
 	void *enc_buf, *dec_buf;
 	uint32_t i;
 	int enc_len, dec_len, inp_len;
-	uint8_t pub_key[256], priv_key[256];
+	RSA2048_KEY_BLOB pub_key = { 0 }, priv_key = { 0 };
 
 	printf("++++++++++++++ RSA-2048 +++++++++++++++\n");
-	if (!rsa2048_init())
-	{
-		printf("[RSA2048] init failed!\n");
-		return;
-	}
-	rsa2048_get_key(pub_key);
-	buf_print(pub_key, 256, "[RSA2048] public key");
+	rsa2048_key_generate(&pub_key, &priv_key);
+	buf_print((uint8_t*)pub_key.blob, pub_key.blob_len, "[RSA2048] public key");
 
 	printf("[RSA2048] plain buffer.\n\t%s\n", test_buf);
 	inp_len = strlen(test_buf);
-	enc_len = rsa2048_encrypt(test_buf, inp_len, &enc_buf);
+	enc_len = rsa2048_encrypt(test_buf, inp_len, &priv_key, &enc_buf);
 	if (enc_len < 0)
 	{
 		printf("Failed to encrypt!\n");
@@ -84,7 +79,7 @@ void test_rsa2048()
 	}
 	buf_print((uint8_t*)enc_buf, enc_len, "[RSA2048] Encoded buffer");
 
-	dec_len = rsa2048_decrypt(enc_buf, enc_len, &dec_buf, pub_key);
+	dec_len = rsa2048_decrypt(enc_buf, enc_len, &pub_key, &dec_buf);
 	if (dec_len < 0)
 	{
 		printf("Failed to decrypt!\n");

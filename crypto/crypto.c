@@ -7,22 +7,16 @@
 #include <wincrypt.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "crypto.h"
 
 /************************************************************************/
 /*-------------------------- RSA2048 -----------------------------------*/
 /************************************************************************/
-#include "rsa.h"
 
 #define RSA2048BIT_KEY 0x8000000
 #define SAFE_FREE(x) if(x) { free(x); x=NULL; }
-#define KEY_M_BITS      2048
 
-static HCRYPTKEY g_key = 0;
-static HCRYPTPROV g_provider = 0;
-rsa_pk_t g_pub_key;
-rsa_sk_t g_priv_key;
-
-static HCRYPTPROV init_context()
+static HCRYPTPROV rsa2048_init_context()
 {
 	HCRYPTPROV provider = 0;
 
@@ -40,144 +34,123 @@ static HCRYPTPROV init_context()
 	return provider;
 }
 
-bool rsa2048_init()
+bool rsa2048_key_generate(RSA2048_KEY_BLOB* pub_key, RSA2048_KEY_BLOB* priv_key)
 {
-	unsigned long publicKeyLen = 0;
-	unsigned long privateKeyLen = 0;
-	uint8_t *pubkey_blob, *privkey_blob;
-	PUBLICKEYSTRUC  *publickeystruc;
-	RSAPUBKEY *rsapubkey;
-	uint8_t* keyptr;
-	uint32_t keylen;
-
-	g_provider = init_context();
-
-	if (g_provider == 0)
+	HCRYPTPROV prov = 0;
+	HCRYPTKEY key = 0;
+	unsigned long publicKeyLen, privateKeyLen;
+	if (priv_key == NULL || pub_key == NULL)
 		return false;
 
-	if (!CryptGenKey(g_provider, AT_KEYEXCHANGE, RSA2048BIT_KEY | CRYPT_EXPORTABLE, &g_key))
+	prov = rsa2048_init_context();
+	if (prov == 0)
 		return false;
-
-	if (!CryptExportKey(g_key, 0, PUBLICKEYBLOB, 0, NULL, &publicKeyLen))
-	{
-		if (g_key) CryptDestroyKey(g_key);
-		return false;
-	}
-
-	pubkey_blob = (unsigned char *)malloc(publicKeyLen * sizeof(unsigned char));
-	if (pubkey_blob == NULL)
-	{
-		if (g_key) CryptDestroyKey(g_key);
-		return false;
-	}
-	SecureZeroMemory(pubkey_blob, publicKeyLen * sizeof(unsigned char));
-
-	// --------- public key
-	if (!CryptExportKey(g_key, 0, PUBLICKEYBLOB, 0, pubkey_blob, &publicKeyLen))
-	{
-		SAFE_FREE(pubkey_blob);
-		if (g_key) CryptDestroyKey(g_key);
-		return false;
-	}
-
-	publickeystruc = (PUBLICKEYSTRUC*)pubkey_blob;
-	rsapubkey = (RSAPUBKEY*)(publickeystruc + 1);
-	g_pub_key.bits = rsapubkey->bitlen;
-	*(uint32_t*)(g_pub_key.exponent + RSA_MAX_MODULUS_LEN - 3) = rsapubkey->pubexp;
-	memcpy(g_pub_key.modulus, rsapubkey + 1, g_pub_key.bits / 8);
-
-	// --------- private key
-	if (!CryptExportKey(g_key, 0, PRIVATEKEYBLOB, 0, NULL, &privateKeyLen))
-	{
-		SAFE_FREE(pubkey_blob);
-		if (g_key) CryptDestroyKey(g_key);
-		return false;
-	}
-
-	privkey_blob = (unsigned char *)malloc(privateKeyLen * sizeof(unsigned char));
-	if (privkey_blob == NULL)
-	{
-		SAFE_FREE(pubkey_blob);
-		if (g_key) CryptDestroyKey(g_key);
-		return false;
-	}
-	SecureZeroMemory(privkey_blob, privateKeyLen * sizeof(unsigned char));
-
-	if (!CryptExportKey(g_key, 0, PRIVATEKEYBLOB, 0, privkey_blob, &privateKeyLen))
-	{
-		SAFE_FREE(pubkey_blob);
-		SAFE_FREE(privkey_blob);
-		if (g_key) CryptDestroyKey(g_key);
-		return false;
-	}
-
-	publickeystruc = (PUBLICKEYSTRUC*)privkey_blob;
-	rsapubkey = (RSAPUBKEY*)(publickeystruc + 1);
-	g_priv_key.bits = rsapubkey->bitlen;
-	*(uint32_t*)(g_priv_key.public_exponet + RSA_MAX_MODULUS_LEN - 3) = rsapubkey->pubexp;
-
-	keyptr = (uint8_t*)(rsapubkey + 1);
-	keylen = rsapubkey->bitlen / 8;
-	memcpy(g_priv_key.modulus, keyptr, keylen);
-
-	keyptr += keylen;
-	keylen = rsapubkey->bitlen / 16;
-	memcpy(g_priv_key.prime1, keyptr, keylen);
-
-	keyptr += keylen;
-	memcpy(g_priv_key.prime2, keyptr, keylen);
 	
-	keyptr += keylen;
-	memcpy(g_priv_key.prime_exponent1, keyptr, keylen);
+	/* Get public key blob */
+	if (!CryptGenKey(prov, AT_KEYEXCHANGE, RSA2048BIT_KEY | CRYPT_EXPORTABLE, &key))
+		goto _exit;
 
-	keyptr += keylen;
-	memcpy(g_priv_key.prime_exponent2, keyptr, keylen);
+	if (!CryptExportKey(key, 0, PUBLICKEYBLOB, 0, NULL, &publicKeyLen))
+		goto _exit;
 
-	keyptr += keylen;
-	memcpy(g_priv_key.coefficient, keyptr, keylen);
+	pub_key->blob = malloc(publicKeyLen);
+	pub_key->blob_len = publicKeyLen;
+	if (!CryptExportKey(key, 0, PUBLICKEYBLOB, 0, pub_key->blob, &publicKeyLen))
+		goto _exit;
+	
+	/* Get private key blob*/
+	if (!CryptExportKey(key, 0, PRIVATEKEYBLOB, 0, NULL, &privateKeyLen))
+		goto _exit;
 
-	keyptr += keylen;
-	keylen = rsapubkey->bitlen / 8;
-	memcpy(g_priv_key.exponent, keyptr, keylen);
+	priv_key->blob = malloc(privateKeyLen);
+	priv_key->blob_len = privateKeyLen;
+	if (!CryptExportKey(key, 0, PRIVATEKEYBLOB, 0, priv_key->blob, &privateKeyLen))
+		goto _exit;
 
-	CryptDestroyKey(g_key);
-	CryptReleaseContext(g_provider, 0);
+	if (key) CryptDestroyKey(key);
+	if (prov) CryptReleaseContext(prov, 0);
 	return true;
+
+_exit:
+	if (key) CryptDestroyKey(key);
+	if (prov) CryptReleaseContext(prov, 0);
+	if (pub_key->blob) free(pub_key->blob);
+	if (priv_key->blob) free(pub_key->blob);
+	return false;
 }
 
-void rsa2048_get_key(void* pubkey)
+int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, void** outbuf)
 {
-	memcpy(pubkey, g_pub_key.modulus, RSA_MAX_MODULUS_LEN);
-}
+	HCRYPTPROV prov = 0;
+	HCRYPTKEY key = 0;
+	unsigned long encLen = 0, len = 0;
 
-int rsa2048_encrypt(void* inbuf, uint32_t buflen, void** outbuf)
-{
-	int enc_len;
-
-	*outbuf = malloc((g_priv_key.bits / 8) + 1);
-	if (rsa_private_encrypt(*outbuf, &enc_len, inbuf, buflen, &g_priv_key) != 0)
+	if (inbuf == NULL || !buflen || outbuf == NULL)
 		return -1;
-	return enc_len;
+	
+	prov = rsa2048_init_context();
+	if (prov == 0)
+		goto _err_exit;
+
+	if (!CryptImportKey(prov, priv_key->blob, priv_key->blob_len, 0, CRYPT_OAEP, &key))
+		goto _err_exit;
+
+	len = buflen + 1;
+	if (!CryptEncrypt(key, 0, TRUE, 0, NULL, &len, 0))
+		goto _err_exit;
+
+	encLen = len;
+	*outbuf = malloc(encLen);
+	SecureZeroMemory(*outbuf, encLen);
+	memcpy_s(*outbuf, encLen, inbuf, buflen);
+	len = buflen + 1;
+	if (!CryptEncrypt(key, 0, TRUE, CRYPT_OAEP, *outbuf, &len, encLen))
+		goto _err_exit;
+
+	if (key) CryptDestroyKey(key);
+	if (prov) CryptReleaseContext(prov, 0);
+	return encLen;
+
+_err_exit:
+	if (key) CryptDestroyKey(key);
+	if (prov) CryptReleaseContext(prov, 0);
+	if (*outbuf) free(*outbuf);
+	return -1;
 }
 
-static uint8_t public_exp[] = { 1, 0, 1 }; // 65537
-int rsa2048_decrypt(void* inbuf, int in_len, void** outbuf, void* deckey)
+int rsa2048_decrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* pub_key, void** outbuf)
 {
-	rsa_pk_t pub_key = { 0 };
-	int dec_len;
+	HCRYPTPROV prov = 0;
+	HCRYPTKEY key = 0;
+	unsigned long len = 0, decLen;
 
-	pub_key.bits = KEY_M_BITS;
-	memcpy(pub_key.modulus, deckey, RSA_MAX_MODULUS_LEN);
-	memcpy(&pub_key.exponent[RSA_MAX_MODULUS_LEN - sizeof(public_exp)], public_exp, sizeof(public_exp));
-
-	*outbuf = malloc(in_len);
-
-	if (rsa_public_decrypt((uint8_t*)*outbuf, &dec_len, inbuf, in_len, &g_pub_key) != 0)
-	{
-		free(*outbuf);
+	if (inbuf == NULL || !buflen || outbuf == NULL)
 		return -1;
-	}
-	return dec_len;
+
+	prov = rsa2048_init_context();
+	if (prov == 0)
+		goto _err_exit;
+
+	if (!CryptImportKey(prov, pub_key->blob, pub_key->blob_len, 0, CRYPT_OAEP, &key))
+		goto _err_exit;
+
+	*outbuf = malloc(buflen);
+	SecureZeroMemory(*outbuf, buflen);
+	memcpy_s(*outbuf, buflen, inbuf, buflen);
+
+	decLen = buflen;
+	if (!CryptDecrypt(key, 0, TRUE, CRYPT_OAEP, *outbuf, &decLen))
+		goto _err_exit;
+
+	if (key) CryptDestroyKey(key);
+	if (prov) CryptReleaseContext(prov, 0);
+	return decLen;
+
+_err_exit:
+	if (key) CryptDestroyKey(key);
+	if (prov) CryptReleaseContext(prov, 0);
+	if (*outbuf) free(*outbuf);
+	return -1;
 }
 
 /************************************************************************/
