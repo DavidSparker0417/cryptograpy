@@ -13,6 +13,8 @@
 #include "crypto.h"
 
 #pragma comment(lib, "crypto")
+#pragma comment(lib, "Crypt32")
+
 void buf_print(uint8_t* buf, int len, char* fmt, ...)
 {
 	va_list va;
@@ -58,30 +60,41 @@ static uint8_t key_m[] = {
 void test_rsa2048()
 {
 	char *test_buf = "Testing rsa-2048 encode/decode...";
-	uint8_t enc_buf[256];
-	uint8_t dec_buf[256];
+	void *enc_buf, *dec_buf;
 	uint32_t i;
 	int enc_len, dec_len, inp_len;
+	uint8_t pub_key[256], priv_key[256];
 
 	printf("++++++++++++++ RSA-2048 +++++++++++++++\n");
+	if (!rsa2048_init())
+	{
+		printf("[RSA2048] init failed!\n");
+		return;
+	}
+	rsa2048_get_key(pub_key);
+	buf_print(pub_key, 256, "[RSA2048] public key");
+
 	printf("[RSA2048] plain buffer.\n\t%s\n", test_buf);
 	inp_len = strlen(test_buf);
-	enc_len = rsa2048_encrypt(test_buf, enc_buf, key_m, inp_len);
+	enc_len = rsa2048_encrypt(test_buf, inp_len, &enc_buf);
 	if (enc_len < 0)
 	{
 		printf("Failed to encrypt!\n");
 		return;
 	}
-	buf_print(enc_buf, enc_len, "[RSA2048] Encoded buffer");
+	buf_print((uint8_t*)enc_buf, enc_len, "[RSA2048] Encoded buffer");
 
-	dec_len = rsa2048_decrypt(enc_buf, dec_buf, key_m, enc_len);
+	dec_len = rsa2048_decrypt(enc_buf, enc_len, &dec_buf, pub_key);
 	if (dec_len < 0)
 	{
 		printf("Failed to decrypt!\n");
 		return;
 	}
-	dec_buf[dec_len] = 0;
+
 	printf("[RSA2048] Decoded result\n\t%s\n", dec_buf);
+
+	free(enc_buf);
+	free(dec_buf);
 }
 
 void test_base64()
@@ -132,11 +145,21 @@ void test_blowfish()
 	free(decbuf);
 }
 
+void test_crc16()
+{
+	char *test_buf = "Testing crc16!";
+	uint16_t crc;
+	printf("++++++++++++++ CRC16 +++++++++++++++\n");
+	printf("[CRC16] plain buffer.\n\t%s\n", test_buf);
+	crc = crc_16((uint8_t*)test_buf, strlen(test_buf));
+	printf("[CRC16] crc = .\n\t0x%04X\n", crc);
+}
 int _tmain(int argc, _TCHAR* argv[])
 {
 	test_rsa2048();
-	test_base64();
+	/*test_base64();
 	test_blowfish();
+	test_crc16();*/
 	return 0;
 }
 

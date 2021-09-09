@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 /*
 ** Translation Table as described in RFC1113
@@ -36,7 +37,7 @@ int base64_encode(void* in, int in_len, void** out)
 {
 	uint8_t *p_out = NULL, *p_in = (uint8_t*)in;
 	int pos = 0;
-	uint8_t endloop = 0;
+	bool endloop = false;
 
 	if (!in || !in_len)
 		return -1;
@@ -59,7 +60,7 @@ int base64_encode(void* in, int in_len, void** out)
 			else
 			{
 				in_blk[i] = 0;
-				endloop = 1;
+				endloop = true;
 			}
 		}
 
@@ -74,7 +75,7 @@ int base64_decode(void* in, int in_len, void** out)
 {
 	uint8_t *p_out = NULL, *p_in = (uint8_t*)in;
 	int pos = 0;
-	uint8_t endloop = 0;
+	bool endloop = false;
 	uint8_t inblk[4] = { 0 };
 
 	if (!in || !in_len)
@@ -96,7 +97,7 @@ int base64_decode(void* in, int in_len, void** out)
 			{
 				if (pos == in_len)
 				{
-					endloop = 1;
+					endloop = true;
 					break;
 				}
 				v = p_in[pos++];

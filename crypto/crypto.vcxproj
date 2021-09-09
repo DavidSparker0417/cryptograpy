@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -85,10 +85,12 @@
     <ClCompile Include="bignum.c" />
     <ClCompile Include="blowfish.c" />
     <ClCompile Include="blowfish_dat.c" />
+    <ClCompile Include="crc16.c" />
     <ClCompile Include="crypto.c" />
     <ClCompile Include="rsa.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\crypto.h" />
     <ClInclude Include="bignum.h" />
     <ClInclude Include="blowfish.h" />
     <ClInclude Include="keys.h" />
