@@ -10,3 +10,6 @@
 *.suo
 *.lib
 *.opensdf
+*.ipch
+*.pch
+*.aps
