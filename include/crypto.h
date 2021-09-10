@@ -16,7 +16,7 @@ extern "C" {
 	} RSA2048_KEY_BLOB;
 
 	bool rsa2048_key_generate(RSA2048_KEY_BLOB* pub_key, RSA2048_KEY_BLOB* priv_key);
-	bool rsa2048_make_pubkey(uint32_t exponent, uint8_t* modulus, uint32_t modulus_len, RSA2048_KEY_BLOB* pubkey);
+	bool rsa2048_import_key_from_file(char* pubkey_file, RSA2048_KEY_BLOB* pub_key, char* privkey_file, RSA2048_KEY_BLOB* priv_key, uint8_t filemode);
 	int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, void** outbuf);
 	int rsa2048_decrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* pub_key, void** outbuf);
 

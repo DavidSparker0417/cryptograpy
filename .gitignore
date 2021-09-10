@@ -13,3 +13,6 @@
 *.ipch
 *.pch
 *.aps
+*.db
+*.user
+*.bin

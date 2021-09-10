@@ -11,6 +11,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "crypto_test", "crypto_test\
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "winman_keygen", "winman_keygen\winman_keygen.vcxproj", "{19977798-46A9-45D5-B053-F103228D9452}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5E52B3C0-A949-4B24-9855-E877318E62BA} = {5E52B3C0-A949-4B24-9855-E877318E62BA}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

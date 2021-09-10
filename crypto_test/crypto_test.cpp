@@ -44,9 +44,9 @@ void test_rsa2048()
 {
 	char *test_buf = "Testing rsa-2048 encode/decode...";
 	void *enc_buf, *dec_buf;
-	uint32_t i;
 	int enc_len, dec_len, inp_len;
 	RSA2048_KEY_BLOB pub_key = { 0 }, priv_key = { 0 };
+	FILE* fp;
 
 	printf("++++++++++++++ RSA-2048 +++++++++++++++\n");
 	rsa2048_key_generate(&pub_key, &priv_key);
@@ -69,6 +69,12 @@ void test_rsa2048()
 		return;
 	}
 
+	fp = fopen("privkey.bin", "wb");
+	fwrite(priv_key.blob, 1, priv_key.blob_len, fp);
+	fclose(fp);
+	fp = fopen("pubkey.bin", "wb");
+	fwrite(pub_key.blob, 1, pub_key.blob_len, fp);
+	fclose(fp);
 	printf("[RSA2048] Decoded result\n\t%s\n", dec_buf);
 
 	free(enc_buf);
@@ -145,7 +151,10 @@ void test_keygen()
 	printf("++++++++++++++ KEYGEN +++++++++++++++\n");
 	printf("[KEYGEN] device id = %s\n", test_buf);
 
-	if (!rsa2048_key_generate(&pub_key, &priv_key))
+	/*if (!rsa2048_key_generate(&pub_key, &priv_key))
+		goto _exit;*/
+
+	if (!rsa2048_import_key_from_file("pubkey.bin", &pub_key, "privkey.bin", &priv_key, 0))
 		goto _exit;
 
 	activation_code = crypto_keygen(test_buf, strlen(test_buf), &priv_key);
@@ -168,8 +177,8 @@ _exit:
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	/*test_rsa2048();
-	test_base64();
+	test_rsa2048();
+	/*test_base64();
 	test_blowfish();
 	test_crc16();*/
 	test_keygen();

@@ -9,6 +9,10 @@
 #include <stdbool.h>
 #include "crypto.h"
 
+#define RSA2048_KEYBOLOB_PUBKEY_LEN		276
+#define RSA2048_KEYBOLOB_PRIVKEY_LEN	1172
+
+#define SAFE_FCLOSE(x) if(x) { fclose(x); x=NULL; }
 /************************************************************************/
 /*-------------------------- RSA2048 -----------------------------------*/
 /************************************************************************/
@@ -73,15 +77,51 @@ bool rsa2048_key_generate(RSA2048_KEY_BLOB* pub_key, RSA2048_KEY_BLOB* priv_key)
 _exit:
 	if (key) CryptDestroyKey(key);
 	if (prov) CryptReleaseContext(prov, 0);
-	if (pub_key->blob) free(pub_key->blob);
-	if (priv_key->blob) free(pub_key->blob);
+	SAFE_FREE(pub_key->blob);
+	SAFE_FREE(pub_key->blob);
 	return false;
 }
 
-bool rsa2048_make_pubkey(uint32_t exponent, uint8_t* modulus, uint32_t modulus_len, RSA2048_KEY_BLOB* pubkey)
+bool rsa2048_import_key_from_file(char* pubkey_file, RSA2048_KEY_BLOB* pub_key, char* privkey_file, RSA2048_KEY_BLOB* priv_key, uint8_t filemode)
 {
-	//if pubkey
+	FILE* fp;
+	
+	if (pubkey_file == NULL || pub_key == NULL || pub_key->blob ||
+		privkey_file == NULL || priv_key == NULL || priv_key->blob)
+		return false;
+
+	// read public key from file
+	fp = fopen(pubkey_file, "rb");
+	if (fp == NULL)
+		return false;
+	fseek(fp, 0, SEEK_END);
+	pub_key->blob_len = ftell(fp);
+	if (pub_key->blob_len < RSA2048_KEYBOLOB_PUBKEY_LEN)
+		goto _err_exit_;
+	pub_key->blob = malloc(pub_key->blob_len);
+	fseek(fp, 0, SEEK_SET);
+	fread(pub_key->blob, 1, pub_key->blob_len, fp);
+	SAFE_FCLOSE(fp);
+
+	// read private key from file
+	fp = fopen(privkey_file, "rb");
+	if (fp == NULL)
+		return false;
+	fseek(fp, 0, SEEK_END);
+	priv_key->blob_len = ftell(fp);
+	if (priv_key->blob_len < RSA2048_KEYBOLOB_PUBKEY_LEN)
+		goto _err_exit_;
+	priv_key->blob = malloc(priv_key->blob_len);
+	fseek(fp, 0, SEEK_SET);
+	fread(priv_key->blob, 1, priv_key->blob_len, fp);
+	SAFE_FCLOSE(fp);
+
 	return true;
+_err_exit_:
+	SAFE_FCLOSE(fp);
+	SAFE_FREE(pub_key->blob);
+	SAFE_FREE(priv_key->blob);
+	return false;
 }
 
 int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, void** outbuf)
@@ -119,7 +159,7 @@ int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, vo
 _err_exit:
 	if (key) CryptDestroyKey(key);
 	if (prov) CryptReleaseContext(prov, 0);
-	if (*outbuf) free(*outbuf);
+	SAFE_FREE(*outbuf);
 	return -1;
 }
 
@@ -154,7 +194,7 @@ int rsa2048_decrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* pub_key, voi
 _err_exit:
 	if (key) CryptDestroyKey(key);
 	if (prov) CryptReleaseContext(prov, 0);
-	if (*outbuf) free(*outbuf);
+	SAFE_FREE(*outbuf);
 	return -1;
 }
 
