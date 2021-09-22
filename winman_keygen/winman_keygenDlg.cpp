@@ -227,8 +227,6 @@ void Cwinman_keygenDlg::OnBnClickedGenerate()
 	if (activation_checkout(active_code, dev_info, devinfo_len, &pubkey))
 		AfxMessageBox(_T("Activation code validation success!"));
 	else
-		AfxMessageBox(_T("Activation code validation failed!"));	
-	/*SAFE_FREE(pubkey.blob);
-	SAFE_FREE(privkey.blob);*/
+		AfxMessageBox(_T("Activation code validation failed!"));
 	SAFE_FREE(activate_code);
 }

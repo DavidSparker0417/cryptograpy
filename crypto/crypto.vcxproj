@@ -90,12 +90,14 @@
     <ClCompile Include="crc16.c" />
     <ClCompile Include="crypto.c" />
     <ClCompile Include="keygen.c" />
+    <ClCompile Include="rsa.c" />
     <ClCompile Include="sha256.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\crypto.h" />
     <ClInclude Include="bignum.h" />
     <ClInclude Include="blowfish.h" />
+    <ClInclude Include="rsa.h" />
     <ClInclude Include="sha256.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

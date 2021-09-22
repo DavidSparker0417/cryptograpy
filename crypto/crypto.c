@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "crypto.h"
+#include "rsa.h"
 
 #define RSA2048_KEYBOLOB_PUBKEY_LEN		276
 #define RSA2048_KEYBOLOB_PRIVKEY_LEN	1172
@@ -126,74 +127,104 @@ _err_exit_:
 
 int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, void** outbuf)
 {
-	HCRYPTPROV prov = 0;
-	HCRYPTKEY key = 0;
-	unsigned long encLen = 0, len = 0;
+	uint32_t enclen;
+	rsa_sk_t pkey = { 0 };
+	PUBLICKEYSTRUC* publickeystruc;
+	RSAPUBKEY* rsapubkey;
+	uint8_t* ptr;
+	uint32_t klen = 0;
+	int i = 0;
 
 	if (inbuf == NULL || !buflen || outbuf == NULL)
 		return -1;
+
+	publickeystruc = priv_key->blob;
+	rsapubkey = (RSAPUBKEY*)(publickeystruc + 1);
+	ptr = (uint8_t*)(rsapubkey + 1);
+	klen = rsapubkey->bitlen / 8;
 	
-	prov = rsa2048_init_context();
-	if (prov == 0)
+	pkey.bits = rsapubkey->bitlen;
+	*(uint32_t*)(pkey.public_exponet + RSA_MAX_MODULUS_LEN - 4) = htonl(rsapubkey->pubexp);
+
+	/*memcpy(pkey.modulus, ptr, klen);*/
+	for (i = 0; i < klen; i++)
+		pkey.modulus[RSA_MAX_MODULUS_LEN - i - 1] = ptr[i];
+	ptr += klen;
+
+	/*memcpy(pkey.prime1, ptr, klen);*/
+	klen = rsapubkey->bitlen / 16;
+	for (i = 0; i < klen; i++)
+		pkey.prime1[RSA_MAX_PRIME_LEN - i - 1] = ptr[i];
+	ptr += klen;
+
+	/*memcpy(pkey.prime2, ptr, klen);*/
+	for (i = 0; i < klen; i++)
+		pkey.prime2[RSA_MAX_PRIME_LEN - i - 1] = ptr[i];
+	ptr += klen;
+
+	/*memcpy(pkey.prime_exponent1, ptr, klen);*/
+	for (i = 0; i < klen; i++)
+		pkey.prime_exponent1[RSA_MAX_PRIME_LEN - i - 1] = ptr[i];
+	ptr += klen;
+
+	/*memcpy(pkey.prime_exponent2, ptr, klen);*/
+	for (i = 0; i < klen; i++)
+		pkey.prime_exponent2[RSA_MAX_PRIME_LEN - i - 1] = ptr[i];
+	ptr += klen;
+
+	/*memcpy(pkey.coefficient, ptr, klen); ptr += klen;*/
+	for (i = 0; i < klen; i++)
+		pkey.coefficient[RSA_MAX_PRIME_LEN - i - 1] = ptr[i];
+	ptr += klen;
+
+	klen = rsapubkey->bitlen / 8;
+	/*memcpy(pkey.exponent, ptr, klen);*/
+	for (i = 0; i < klen; i++)
+		pkey.exponent[RSA_MAX_MODULUS_LEN - i - 1] = ptr[i];
+
+	*outbuf = malloc(256);
+	if (rsa_private_encrypt(*outbuf, &enclen, inbuf, buflen, &pkey) != 0)
 		goto _err_exit;
 
-	if (!CryptImportKey(prov, priv_key->blob, priv_key->blob_len, 0, CRYPT_OAEP, &key))
-		goto _err_exit;
-
-	len = buflen + 1;
-	if (!CryptEncrypt(key, 0, TRUE, 0, NULL, &len, 0))
-		goto _err_exit;
-
-	encLen = len;
-	*outbuf = malloc(encLen);
-	SecureZeroMemory(*outbuf, encLen);
-	memcpy_s(*outbuf, encLen, inbuf, buflen);
-	len = buflen + 1;
-	if (!CryptEncrypt(key, 0, TRUE, CRYPT_OAEP, *outbuf, &len, encLen))
-		goto _err_exit;
-
-	if (key) CryptDestroyKey(key);
-	if (prov) CryptReleaseContext(prov, 0);
-	return encLen;
-
+	return enclen;
 _err_exit:
-	if (key) CryptDestroyKey(key);
-	if (prov) CryptReleaseContext(prov, 0);
 	SAFE_FREE(*outbuf);
 	return -1;
 }
 
 int rsa2048_decrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* pub_key, void** outbuf)
 {
-	HCRYPTPROV prov = 0;
-	HCRYPTKEY key = 0;
-	unsigned long len = 0, decLen;
+	unsigned long decLen = 0;
+	rsa_pk_t pkey = { 0 };
+	PUBLICKEYSTRUC* publickeystruc;
+	RSAPUBKEY* rsapubkey;
+	uint8_t* ptr;
+	uint32_t klen = 0;
+	int i = 0;
 
 	if (inbuf == NULL || !buflen || outbuf == NULL)
 		return -1;
 
-	prov = rsa2048_init_context();
-	if (prov == 0)
-		goto _err_exit;
-
-	if (!CryptImportKey(prov, pub_key->blob, pub_key->blob_len, 0, CRYPT_OAEP, &key))
-		goto _err_exit;
-
 	*outbuf = malloc(buflen);
 	SecureZeroMemory(*outbuf, buflen);
-	memcpy_s(*outbuf, buflen, inbuf, buflen);
-
-	decLen = buflen;
-	if (!CryptDecrypt(key, 0, TRUE, CRYPT_OAEP, *outbuf, &decLen))
+	
+	publickeystruc = pub_key->blob;
+	rsapubkey = (RSAPUBKEY*)(publickeystruc + 1);
+	ptr = (uint8_t*)(rsapubkey + 1);
+	klen = rsapubkey->bitlen / 8;
+	pkey.bits = rsapubkey->bitlen;
+	*(uint32_t*)(pkey.exponent + RSA_MAX_MODULUS_LEN - 4) = htonl(rsapubkey->pubexp);
+	/*memcpy(pkey.modulus, ptr, klen);*/
+	for (i = 0; i < klen; i++)
+		pkey.modulus[RSA_MAX_MODULUS_LEN - i - 1] = ptr[i];
+	
+	if (rsa_public_decrypt(*outbuf, &decLen, inbuf, buflen, &pkey) != 0)
 		goto _err_exit;
 
-	if (key) CryptDestroyKey(key);
-	if (prov) CryptReleaseContext(prov, 0);
 	return decLen;
 
 _err_exit:
-	if (key) CryptDestroyKey(key);
-	if (prov) CryptReleaseContext(prov, 0);
+	
 	SAFE_FREE(*outbuf);
 	return -1;
 }
