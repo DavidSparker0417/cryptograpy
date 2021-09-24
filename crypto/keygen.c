@@ -67,6 +67,7 @@ char* crypto_keygen(void* dev_info, int len, RSA2048_KEY_BLOB* sigkey)
 	if (enclen < 0)
 		goto _err_exit_;
 
+	SAFE_FREE(base_data);
 	activate_code[enclen] = 0;
 	return activate_code;
 
