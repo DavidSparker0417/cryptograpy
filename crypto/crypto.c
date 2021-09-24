@@ -18,6 +18,10 @@
 /*-------------------------- RSA2048 -----------------------------------*/
 /************************************************************************/
 
+#define SWAP_LONG(x)	((((uint32_t)(x)) & 0xFF000000) >> 24)	| \
+						((((uint32_t)(x)) & 0x00FF0000) >> 8)	|	\
+						((((uint32_t)(x)) & 0x0000FF00) << 8)	|	\
+						((((uint32_t)(x)) & 0x000000FF) << 24)
 #define RSA2048BIT_KEY 0x8000000
 
 static HCRYPTPROV rsa2048_init_context()
@@ -144,7 +148,7 @@ int rsa2048_encrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* priv_key, vo
 	klen = rsapubkey->bitlen / 8;
 	
 	pkey.bits = rsapubkey->bitlen;
-	*(uint32_t*)(pkey.public_exponet + RSA_MAX_MODULUS_LEN - 4) = htonl(rsapubkey->pubexp);
+	*(uint32_t*)(pkey.public_exponet + RSA_MAX_MODULUS_LEN - 4) = SWAP_LONG(rsapubkey->pubexp);
 
 	/*memcpy(pkey.modulus, ptr, klen);*/
 	for (i = 0; i < klen; i++)
@@ -213,7 +217,7 @@ int rsa2048_decrypt(void* inbuf, uint32_t buflen, RSA2048_KEY_BLOB* pub_key, voi
 	ptr = (uint8_t*)(rsapubkey + 1);
 	klen = rsapubkey->bitlen / 8;
 	pkey.bits = rsapubkey->bitlen;
-	*(uint32_t*)(pkey.exponent + RSA_MAX_MODULUS_LEN - 4) = htonl(rsapubkey->pubexp);
+	*(uint32_t*)(pkey.exponent + RSA_MAX_MODULUS_LEN - 4) = SWAP_LONG(rsapubkey->pubexp);
 	/*memcpy(pkey.modulus, ptr, klen);*/
 	for (i = 0; i < klen; i++)
 		pkey.modulus[RSA_MAX_MODULUS_LEN - i - 1] = ptr[i];
